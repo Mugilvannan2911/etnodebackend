@@ -1,26 +1,23 @@
 const bcrypt = require('bcrypt');
-const db = require('../config/db');
+const prisma = require('../config/prisma');
+const jwt = require("jsonwebtoken");
 
-const loginUser = (req, res) => {
-    const { username, password} = req.body;
+const loginUser = async (req, res) => {
+    try {
+        const { username, password } = req.body;
 
-    db.query('SELECT * FROM users WHERE username = ?', [username], async (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'Error logging in user',
-                error: err.message
-            });
-        }
+        const user = await prisma.user.findUnique({
+            where: {
+                username: username
+            }
+        });
 
-        if (results.length === 0) {
+        if (!user) {
             return res.status(401).json({
-                status: 'error',
-                message: 'Invalid username or password'
+                status: "error",
+                message: "Invalid username or password"
             });
         }
-
-        const user = results[0];
 
         const passwordMatch = await bcrypt.compare(
             password,
@@ -34,43 +31,59 @@ const loginUser = (req, res) => {
             });
         }
 
-
-        res.json({
-            status: 'success',
-            message: 'User logged in successfully',
-        });
-    })
-}
-
-const registerUser = (req, res) => {
-    const { username, email, password } = req.body;
-
-    bcrypt.hash(password, 10, (err, hashedPassword) => {
-
-        if (err) {
-            return res.status(500).json({
-                status: "error",
-                message: "Error hashing password",
-                error: err.message
-            });
-        }
-
-        db.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], (err, results) => {
-            
-            if (err) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: 'error inserting data',
-                    error: err.message
-                })
+        const token = jwt.sign(
+            {
+                id: user.id,
+                username: user.username,
+                email: user.email
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: process.env.JWT_EXPIRES_IN || "7d"
             }
+        );
 
-            res.json({
-                status: 'success',
-                message: 'User Registered Successfully'
-            })
-        })
-    })
-}
+        return res.json({
+            status: "success",
+            message: "User logged in successfully",
+            token
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Error logging in user",
+            error: error.message
+        });
+    }
+};
+
+const registerUser = async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await prisma.user.create({
+            data: {
+                username,
+                email,
+                password: hashedPassword
+            }
+        });
+
+        return res.status(201).json({
+            status: "success",
+            message: "User Registered Successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Error registering user",
+            error: error.message
+        });
+    }
+};
 
 module.exports = { loginUser, registerUser }

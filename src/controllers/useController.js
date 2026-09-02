@@ -1,41 +1,48 @@
-const db = require('../config/db')
+const prisma = require('../config/prisma');
 
-const getUsers = (req, res) => {
-    db.query('SELECT * FROM expenses', (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'Error fetching users from the database',
-                error: err.message
-            });
-        }
-
+const getUsers = async (req, res) => {
+    try {
+        const results = await prisma.expense.findMany();
         res.json({
             status: 'success',
-            message: 'Users fetched successfully',
+            message: 'Expenses fetched successfully',
             data: results
         });
-    })
-}
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Error fetching expenses from the database',
+            error: err.message
+        });
+    }
+};
 
-const createUser = (req, res) => {
-    const { user_id, title, amount, category, expense_date, created_at } = req.body;
+const createUser = async (req, res) => {
+    try {
+        const { user_id, title, amount, category, expense_date } = req.body;
 
-    db.query('INSERT INTO expenses (user_id, title, amount, category, expense_date, created_at) VALUES (?, ?, ?, ?, ?, ?)', [user_id, title, amount, category, expense_date, created_at], (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'Error creating user',
-                error: err.message
-            });
-        }
+        const newExpense = await prisma.expense.create({
+            data: {
+                user_id,
+                title,
+                amount: parseFloat(amount),
+                category,
+                expense_date: expense_date ? new Date(expense_date) : undefined
+            }
+        });
 
-        res.json({
+        res.status(201).json({
             status: 'success',
-            message: 'User created successfully',
-            data: results
+            message: 'Expense created successfully',
+            data: newExpense
         });
-    });
-}
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Error creating expense',
+            error: err.message
+        });
+    }
+};
 
-module.exports = { getUsers, createUser }
+module.exports = { getUsers, createUser };
