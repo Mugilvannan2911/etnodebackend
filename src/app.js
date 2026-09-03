@@ -8,9 +8,6 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 
-app.use(cookieParser());
-
-
 // CORS
 
 app.use(cors());
@@ -25,6 +22,8 @@ app.use(cors());
 // }));
 
 app.use(express.json());
+
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
     res.send("Express server is running");
