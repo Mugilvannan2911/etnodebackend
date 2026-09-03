@@ -6,9 +6,10 @@ const authRoutes = require("./routes/authRoute");
 
 const cookieParser = require("cookie-parser");
 
+const app = express();
+
 app.use(cookieParser());
 
-const app = express();
 
 // CORS
 
