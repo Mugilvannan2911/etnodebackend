@@ -4,6 +4,10 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoute");
 const authRoutes = require("./routes/authRoute");
 
+const cookieParser = require("cookie-parser");
+
+app.use(cookieParser());
+
 const app = express();
 
 // CORS
